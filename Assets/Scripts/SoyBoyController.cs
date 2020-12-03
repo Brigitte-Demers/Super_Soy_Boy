@@ -24,7 +24,7 @@ public class SoyBoyController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
+
     }
 
     // Update is called once per frame
@@ -46,7 +46,6 @@ public class SoyBoyController : MonoBehaviour
             sr.flipX = true;
         }
     }
-    }
 
     // Locates the specified component types on the GameObject upon
     // which SoyBoyController.cs sits and assigns them to the three fields. With this, you
@@ -59,5 +58,37 @@ public class SoyBoyController : MonoBehaviour
         sr = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
+    }
+
+    void FixedUpdate()
+    {
+        // 1. Assign the value of accel — the public float field — to a private variable named
+        // acceleration.This might seem redundant right now, but later you’ll see
+        // acceleration used to hold ground and air acceleration values, so it’s important to define it now.
+        var acceleration = accel;
+        var xVelocity = 0f;
+        // 2. If horizontal axis controls are neutral, then xVelocity is set to 0, otherwise
+        // xVelocity is set to the current x velocity of the rb(aka Rigidbody2D) component.
+        if (input.x ==0)
+        {
+            xVelocity = 0f;
+        }
+        else
+        {
+            xVelocity = rb.velocity.x;
+        }
+
+        // 3. Force is added to rb by calculating the current value of the horizontal axis controls
+        // multiplied by speed, which is in turn multiplied by acceleration. Both speed and
+        // acceleration values are pre - defined values from the public float fields declared at
+       // the top of the script. 0 is used for the Y component, as jumping is not yet being
+       // taken into account.
+        rb.AddForce(new Vector2(((input.x * speed) - rb.velocity.x)
+        * acceleration, 0));
+        // 4. Velocity is reset on rb so it can stop Super Soy Boy from moving left or right when
+        // controls are in a neutral state.Otherwise, velocity is set to exactly what it’s
+       // currently at.This has the effect of stopping Super Soy Boy quickly, even from a full
+       // run.
+              rb.velocity = new Vector2(xVelocity, rb.velocity.y);
     }
 }
