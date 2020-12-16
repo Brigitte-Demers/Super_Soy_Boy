@@ -11,6 +11,10 @@ public class SoyBoyController : MonoBehaviour
     // force to apply to Super Soy Boy’s Rigidbody.
     public float speed = 14f;
     public float accel = 6f;
+    public bool isJumping;
+    public float jumpSpeed = 8f;
+    public float jumpDurationThreshold = 0.25f;
+    public float airAccel = 3f;
     // The Vector2 input field stores the controller’s current input values for x and y at any
     // point in time.Negatives mean the controls are going left(-x) or down(-y), and positives
     // mean right(x) or up(y).
@@ -20,6 +24,10 @@ public class SoyBoyController : MonoBehaviour
     private SpriteRenderer sr;
     private Rigidbody2D rb;
     private Animator animator;
+    private float rayCastLengthCheck = 0.005f;
+    private float width;
+    private float height;
+    private float jumpDuration;
 
     // Start is called before the first frame update
     void Start()
@@ -45,6 +53,27 @@ public class SoyBoyController : MonoBehaviour
         {
             sr.flipX = true;
         }
+
+        if (input.y >= 1f)
+        {
+            jumpDuration += Time.deltaTime;
+        }
+        else
+        {
+            isJumping = false;
+            jumpDuration = 0f;
+        }
+
+        // Determines if player is touching the ground.
+        if (PlayerIsOnGround() && isJumping == false)
+        {
+            if (input.y > 0f)
+            {
+                isJumping = true;
+            }
+        }
+
+        if (jumpDuration > jumpDurationThreshold) input.y = 0f;
     }
 
     // Locates the specified component types on the GameObject upon
@@ -58,6 +87,9 @@ public class SoyBoyController : MonoBehaviour
         sr = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
+
+        width = GetComponent<Collider2D>().bounds.extents.x + 0.1f;
+        height = GetComponent<Collider2D>().bounds.extents.y + 0.2f;
     }
 
     void FixedUpdate()
@@ -69,7 +101,7 @@ public class SoyBoyController : MonoBehaviour
         var xVelocity = 0f;
         // 2. If horizontal axis controls are neutral, then xVelocity is set to 0, otherwise
         // xVelocity is set to the current x velocity of the rb(aka Rigidbody2D) component.
-        if (input.x ==0)
+        if (PlayerIsOnGround() && input.x == 0)
         {
             xVelocity = 0f;
         }
@@ -81,14 +113,50 @@ public class SoyBoyController : MonoBehaviour
         // 3. Force is added to rb by calculating the current value of the horizontal axis controls
         // multiplied by speed, which is in turn multiplied by acceleration. Both speed and
         // acceleration values are pre - defined values from the public float fields declared at
-       // the top of the script. 0 is used for the Y component, as jumping is not yet being
-       // taken into account.
+        // the top of the script. 0 is used for the Y component, as jumping is not yet being
+        // taken into account.
         rb.AddForce(new Vector2(((input.x * speed) - rb.velocity.x)
         * acceleration, 0));
         // 4. Velocity is reset on rb so it can stop Super Soy Boy from moving left or right when
         // controls are in a neutral state.Otherwise, velocity is set to exactly what it’s
-       // currently at.This has the effect of stopping Super Soy Boy quickly, even from a full
-       // run.
-              rb.velocity = new Vector2(xVelocity, rb.velocity.y);
+        // currently at.This has the effect of stopping Super Soy Boy quickly, even from a full
+        // run.
+        rb.velocity = new Vector2(xVelocity, rb.velocity.y);
+
+        if (isJumping && jumpDuration < jumpDurationThreshold)
+        {
+            rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
+        }
+    }
+
+    public bool PlayerIsOnGround()
+    {
+        // 1. The first ground check performs a Raycast directly below the center of the the
+        // character(Transform.position.x), using a length equal to the value of
+        // rayCastLengthCheck which is defaulted to 0.005f — a very short raycast is therefore
+        // sent down from the bottom of the SoyBoy sprite. The other two ground checks do
+        // exactly the same thing, but slightly to the left and right of center.These three
+        // raycast checks allow for accurate ground detection.
+        bool groundCheck1 = Physics2D.Raycast(new Vector2(
+        transform.position.x, transform.position.y - height),
+        -Vector2.up, rayCastLengthCheck);
+        bool groundCheck2 = Physics2D.Raycast(new Vector2(
+        transform.position.x + (width - 0.2f),
+        transform.position.y - height), -Vector2.up,
+        rayCastLengthCheck);
+        bool groundCheck3 = Physics2D.Raycast(new Vector2(
+        transform.position.x - (width - 0.2f),
+        transform.position.y - height), -Vector2.up,
+        rayCastLengthCheck);
+        // 2. If any of the ground checks come back as true, then this method returns true to the
+        // caller.Otherwise, it will return false.
+        if (groundCheck1 || groundCheck2 || groundCheck3)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 }
