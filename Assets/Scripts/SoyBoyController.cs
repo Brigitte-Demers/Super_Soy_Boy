@@ -15,6 +15,7 @@ public class SoyBoyController : MonoBehaviour
     public float jumpSpeed = 8f;
     public float jumpDurationThreshold = 0.25f;
     public float airAccel = 3f;
+    public float jump = 14f;
     // The Vector2 input field stores the controller’s current input values for x and y at any
     // point in time.Negatives mean the controls are going left(-x) or down(-y), and positives
     // mean right(x) or up(y).
@@ -94,10 +95,20 @@ public class SoyBoyController : MonoBehaviour
 
     void FixedUpdate()
     {
+        var acceleration = 0f;
+        if (PlayerIsOnGround())
+        {
+            acceleration = accel;
+        }
+        else
+        {
+            acceleration = airAccel;
+        }
+
         // 1. Assign the value of accel — the public float field — to a private variable named
         // acceleration.This might seem redundant right now, but later you’ll see
         // acceleration used to hold ground and air acceleration values, so it’s important to define it now.
-        var acceleration = accel;
+        //var acceleration = accel;
         var xVelocity = 0f;
         // 2. If horizontal axis controls are neutral, then xVelocity is set to 0, otherwise
         // xVelocity is set to the current x velocity of the rb(aka Rigidbody2D) component.
@@ -108,6 +119,16 @@ public class SoyBoyController : MonoBehaviour
         else
         {
             xVelocity = rb.velocity.x;
+        }
+
+        var yVelocity = 0f;
+        if (PlayerIsTouchingGroundOrWall() && input.y == 1)
+        {
+            yVelocity = jump;
+        }
+        else
+        {
+            yVelocity = rb.velocity.y;
         }
 
         // 3. Force is added to rb by calculating the current value of the horizontal axis controls
@@ -121,7 +142,13 @@ public class SoyBoyController : MonoBehaviour
         // controls are in a neutral state.Otherwise, velocity is set to exactly what it’s
         // currently at.This has the effect of stopping Super Soy Boy quickly, even from a full
         // run.
-        rb.velocity = new Vector2(xVelocity, rb.velocity.y);
+        rb.velocity = new Vector2(xVelocity, yVelocity);
+
+        if (IsWallToLeftOrRight() && !PlayerIsOnGround() && input.y == 1)
+        {
+            rb.velocity = new Vector2(-GetWallDirection()
+            * speed * 0.75f, rb.velocity.y);
+        }
 
         if (isJumping && jumpDuration < jumpDurationThreshold)
         {
@@ -157,6 +184,65 @@ public class SoyBoyController : MonoBehaviour
         else
         {
             return false;
+        }
+    }
+
+    public bool IsWallToLeftOrRight()
+    {
+        // 1. Again you’re using the implicit bool conversion check of the Physics2D.Raycast()
+        // method to see if either of two raycasts sent out to the left(-Vector2.right) and to
+        // the right(Vector2.right) of the character sprite hit anything. (Remember that
+        // rayCastLengthCheck has a small value, so the raycast only goes out a very short
+        // distance to the sides of the sprite to check for walls.)
+            bool wallOnleft = Physics2D.Raycast(new Vector2(
+                 transform.position.x - width, transform.position.y),
+                     -Vector2.right, rayCastLengthCheck);
+        bool wallOnRight = Physics2D.Raycast(new Vector2(
+            transform.position.x + width, transform.position.y),
+              Vector2.right, rayCastLengthCheck);
+
+        // 2. If either of these raycasts hit anything, the method returns true — otherwise, false.
+        if (wallOnleft || wallOnRight)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public bool PlayerIsTouchingGroundOrWall()
+    {
+        if (PlayerIsOnGround() || IsWallToLeftOrRight())
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public int GetWallDirection()
+    {
+        bool isWallLeft = Physics2D.Raycast(new Vector2(
+        transform.position.x - width, transform.position.y),
+        -Vector2.right, rayCastLengthCheck);
+        bool isWallRight = Physics2D.Raycast(new Vector2(
+        transform.position.x + width, transform.position.y),
+        Vector2.right, rayCastLengthCheck);
+        if (isWallLeft)
+        {
+            return -1;
+        }
+        else if (isWallRight)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
         }
     }
 }
