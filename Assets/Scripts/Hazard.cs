@@ -46,5 +46,7 @@ public class Hazard : MonoBehaviour
             // 4. Lastly, destroy the colliding object (the player).
             Destroy(coll.gameObject);
         }
+
+        GameManager.instance.RestartLevel(1.25f);
     }
 }
